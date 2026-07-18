@@ -1,0 +1,6 @@
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
+
+export default function Login() {
+  return <main className="grid-bg flex min-h-screen items-center justify-center bg-slate-950 p-6"><div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_30%_20%,rgba(34,211,238,.28),transparent_35%),radial-gradient(circle_at_70%_70%,rgba(124,58,237,.25),transparent_35%)]"/><section className="glass w-full max-w-md rounded-[2rem] p-8"><div className="mb-8 flex items-center gap-3"><div className="rounded-2xl bg-cyan-300 p-3 text-slate-950"><Sparkles /></div><div><h1 className="text-2xl font-bold">Genesis</h1><p className="text-sm text-slate-400">WolfX BI secure access</p></div></div><div className="space-y-4"><input className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-300" placeholder="Email address"/><input className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-300" placeholder="Password" type="password"/><Link href="/dashboard" className="block rounded-2xl bg-cyan-300 px-4 py-3 text-center font-semibold text-slate-950">Enter command center</Link></div><p className="mt-6 text-center text-sm text-slate-400">Authentication UI only. APIs are intentionally not connected.</p></section></main>;
+}
