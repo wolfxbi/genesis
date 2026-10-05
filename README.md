@@ -4,23 +4,23 @@ Genesis is an AI Operating Platform prototype by WolfX BI, built with Next.js 15
 
 ## Current status
 
-**UI prototype with mock content; not a production service.** The app provides a shared platform layout, desktop navigation with active-route highlighting and a collapsible sidebar, a login screen, and a dashboard. Other modules are placeholder pages.
+**UI prototype with mock content; not a production service.** The app provides responsive navigation, a platform overview, and a working browser-only BI workspace with CSV import, date/category filters, calculated KPIs, revenue charts, and paginated records. Other modules are placeholder pages.
 
-No APIs, database, authentication, authorization, or persistent storage are implemented. The login button links directly to the dashboard; platform routes can be opened without signing in. Dashboard actions, search, and notifications are visual controls only. The mobile menu icon has no interaction and the sidebar is hidden below the desktop breakpoint.
+No APIs, database, authentication, authorization, or persistent storage are implemented. `/login` is an honest demo entry screen with no credential fields. Routes are public. The mobile navigation opens/closes and supports Escape; the desktop sidebar collapses. Imported data stays in React state and is discarded on reload or when leaving the BI page.
 
-Use the prototype to demonstrate the intended interface with synthetic content. KPI values, “Trust Score,” “Live activity,” and UI wording such as “production-ready” or “secure access” do not establish real operational or security capabilities.
+Use the prototype to demonstrate the intended interface with synthetic content. The platform overview uses synthetic metrics including “Trust Score”; these do not establish real operational or security capabilities. BI workspace metrics are calculated from the selected dataset.
 
 ## Routes
 
 | Route | Purpose | Implemented today |
 | --- | --- | --- |
 | `/` | Entry point | Redirects to `/login`. |
-| `/login` | Access screen | Email/password UI and dashboard link; no authentication. |
+| `/login` | Access screen | Demo entry links; no authentication or credential collection. |
 | `/dashboard` | Command center | Static KPI cards, decorative bar chart, example activity, and agent widgets. |
 | `/chat` | AI conversations | Placeholder cards; no chat input, model calls, or conversation memory. |
 | `/documents` | Document management | Placeholder cards; no upload, extraction, or storage. |
 | `/knowledge-base` | Trusted sources and retrieval | Placeholder cards; no indexing or retrieval. |
-| `/business-intelligence` | Analytics and insights | Placeholder cards; no data connectors or Power BI embedding. |
+| `/business-intelligence` | Analytics and insights | Working local CSV analysis, filters, KPIs, charts, and records; no external connectors or Power BI embedding. |
 | `/agents` | Specialist AI workers | Placeholder cards; no agent execution or approvals. |
 | `/automation` | Business workflows | Placeholder cards; no triggers, runs, or scheduling. |
 | `/languages` | Localization | Placeholder cards; no locale switching or translation. |
@@ -29,12 +29,11 @@ Use the prototype to demonstrate the intended interface with synthetic content. 
 
 ## Local development
 
-Prerequisites: Git, npm, and a Node.js version compatible with the installed Next.js release. The repository currently does not pin a Node.js version or include a dependency lockfile; several dependencies use `latest`, so installations may resolve differently.
-
+Prerequisites: Git, Node.js 24.19.0 (see `.nvmrc`), and npm 11.9.0. Dependencies are pinned and `package-lock.json` is committed.
 ```bash
 git clone --branch genesis https://github.com/wolfxbi/genesis.git
 cd genesis
-npm install
+npm ci
 npm run dev
 ```
 
@@ -47,7 +46,21 @@ Open [localhost:3000](http://localhost:3000). No API keys or environment variabl
 | `npm run build` | Create a production build. |
 | `npm run start` | Serve an existing production build; run build first. |
 
-**Known tooling gap:** `eslint.config.mjs` imports `@typescript-eslint/parser` and `@typescript-eslint/eslint-plugin`, but these are not declared directly in `package.json`. Resolve dependency/configuration issues before treating lint as a reliable release gate. No automated test script or CI workflow is currently included.
+Run `npm run lint`, `npm test`, `npm run build`, and `npm run typecheck` before opening a PR. GitHub Actions runs these checks with a clean `npm ci` install. Tests cover CSV parsing/validation, financial aggregation, BI import/filter/reset/pagination interactions, and mobile menu interaction in a simulated DOM. They do not replace a visual browser check. ESLint uses the Next.js core-web-vitals and TypeScript configuration.
+
+## BI workspace and CSV import
+
+Open `/business-intelligence`. Start with 36 synthetic observations or download `public/genesis-sales-example.csv`, edit it, and use **Import CSV**. CSV contents never leave the browser; no API key is needed. Imports replace the dataset only after successful validation. **Reset sample** discards imported data and restores the demo.
+
+| Column | Accepted input |
+| --- | --- |
+| `date` | Valid `YYYY-MM-DD`, years 1900–2100. |
+| `category` | 1–80 characters on one line. |
+| `revenue`, `cost` | Non-negative EUR amounts, maximum 1 billion per record, up to two decimals; no currency symbols or thousands separators. |
+
+All four headers are required, in any order. Comma and semicolon delimiters, UTF-8 BOM, CRLF, quoted fields, and escaped quotes are supported. Decimal commas are accepted (quote them in comma-delimited files). Limits: 1 MB and 10,000 records. Invalid input produces an error while preserving the previous dataset.
+
+Date boundaries are inclusive. Filters update every KPI, chart, and the 20-record table pages. Revenue/cost totals use integer cents; operating result is revenue minus cost, and margin is result divided by revenue (undefined at zero revenue). Each row is an observation, not an order; duplicate rows are included. Charts show observed months and the top 10 categories by revenue. No currency conversion, tax handling, or missing-month estimation is performed.
 
 ## Code structure and adding a feature
 
@@ -58,6 +71,8 @@ Open [localhost:3000](http://localhost:3000). No API keys or environment variabl
 | `src/components/app-shell.tsx` | Sidebar, header, and layout interactions. |
 | `src/components/page-card.tsx` | Shared placeholder module presentation. |
 | `src/lib/navigation.ts` | Brand icon and platform navigation items. |
+| `src/lib/bi.ts` | CSV validation, synthetic data, filters, and aggregation. |
+| `src/components/bi-dashboard.tsx` | Local import, filters, metrics, charts, and table UI. |
 | `src/app/globals.css` | Global styles and visual effects. |
 
 1. Create a feature branch from `genesis` and define the smallest user flow and acceptance criteria.
@@ -68,7 +83,7 @@ Open [localhost:3000](http://localhost:3000). No API keys or environment variabl
 
 ## Mock data and future API boundaries
 
-Current fixtures live inline in `src/app/(platform)/dashboard/page.tsx`: KPI values, bar heights, activity messages, and agent names. Module titles and capability labels live in their route pages and are rendered through `PageCard`. They are descriptive UI content, not working features or API responses.
+Current fixtures live inline in `src/app/(platform)/dashboard/page.tsx`: KPI values, bar heights, activity messages, and agent names. The BI workspace uses the separate `sampleRows` fixture in `src/lib/bi.ts` until a local CSV is imported. Other module titles and capability labels live in their route pages and are rendered through `PageCard`. They are descriptive UI content, not working features or API responses.
 
 For future integrations, introduce typed data contracts and a service layer (for example, `src/lib/services/`; not present yet). Use server-side handlers or server code for provider calls and credentials. Define authentication, workspace authorization, validation, persistence, and error handling before accepting customer data. Keep secrets in server environment variables, never in browser-exposed `NEXT_PUBLIC_*` values. Add a secret-free `.env.example` when variables become necessary.
 
@@ -76,17 +91,17 @@ Chat/model calls, document storage and extraction, retrieval, BI connectors, and
 
 ## Deployment verification
 
-No hosting configuration, CI pipeline, or verified deployment URL is committed. Dashboard copy mentions Vercel as an intended target, but deployment is not established by that text.
+A lint/test/build/typecheck CI workflow is committed. No hosting configuration or verified deployment URL is committed.
 
 Before a release or customer demo:
 
-- [ ] Resolve tooling gaps, pin the runtime/dependencies, and commit a lockfile. Use `npm ci` for clean installs once a lockfile exists.
+- [ ] Use the pinned Node/npm versions and `npm ci` for a clean installation.
 - [ ] Run `npm run lint` and `npm run build`; investigate failures rather than bypassing checks.
 - [ ] Run `npm run start` and check every route above by direct URL and navigation. Confirm `/` redirects to `/login`.
-- [ ] Check desktop and narrow mobile layouts, keyboard access, readable labels, and browser/server errors. Track the unfinished mobile menu explicitly.
+- [ ] Check desktop and narrow mobile layouts, keyboard access, readable labels, and browser/server errors. Verify mobile menu open/close, Escape, route selection, CSV import errors, filter totals, and pagination.
 - [ ] Deploy the tested commit to the chosen preview environment. For a Node deployment, use the build/start scripts and the host's assigned port.
 - [ ] Repeat route and layout checks on the deployed URL; record the commit, URL, check results, and any known limitations.
-- [ ] For restricted demos, enable and verify hosting-level access protection. The current login screen provides no access control.
+- [ ] For restricted demos, enable and verify hosting-level access protection. The demo entry screen provides no access control.
 - [ ] Show only synthetic data and explain the prototype status. Verify rollback to the previous deployment before a production release.
 
 These are required checks, not a record that deployment or runtime tests have passed.
@@ -97,11 +112,11 @@ Proposed order; no delivery dates are committed.
 
 | Priority | Step | Completion criterion |
 | --- | --- | --- |
-| 1 | Stabilize development and release checks | Pinned runtime, committed lockfile, explicit lint dependencies, passing lint/build, and a basic CI gate. |
-| 2 | Make the demo usable and honest | Working mobile navigation, accessible controls, visible mock labels, and disabled or explained inactive actions. |
-| 3 | Validate one customer workflow | One concrete BI or document-analysis use case, with an agreed input, output, and success criterion. |
-| 4 | Build that workflow end to end | Typed service boundary, one real integration, loading/error states, and meaningful verification of the user flow. |
-| 5 | Prepare a customer pilot | Real authentication and workspace authorization, appropriate storage/data handling, protected deployment, and documented smoke/rollback checks. |
+| Done in code | Stabilize development and local BI demo | Pinned runtime/dependencies, lockfile, lint/test/build CI, mobile navigation, and local CSV dashboard. |
+| 1 | Validate the demo with a user | Confirm that the CSV schema, metrics, and mobile experience fit an actual business question. |
+| 2 | Validate one customer workflow | One concrete BI or document-analysis use case, with an agreed input, output, and success criterion. |
+| 3 | Build that workflow end to end | Typed service boundary, one real integration, loading/error states, and meaningful verification of the user flow. |
+| 4 | Prepare a customer pilot | Real authentication and workspace authorization, appropriate storage/data handling, protected deployment, and documented smoke/rollback checks. |
 
 Expand chat, agents, automation, and other modules only after the first workflow demonstrates value.
 
